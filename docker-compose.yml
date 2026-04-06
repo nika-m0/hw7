@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: flask_postgres
+    environment:
+      POSTGRES_DB: flask_crud
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - flask_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: flask_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - flask_network
+
+  app:
+    build: .
+    container_name: flask_app
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./app:/app/app
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/flask_crud
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: nika-sirius-test
+    depends_on:
+      - db
+      - redis
+    networks:
+      - flask_network
+  
+  nginx:
+    image: nginx:alpine
+    container_name: flask_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - app
+    networks:
+      - flask_network
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:
+  nginx_cache:
+
+networks:
+  flask_network:
+    driver: bridge

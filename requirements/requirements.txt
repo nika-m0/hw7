@@ -1,0 +1,7 @@
+Flask==2.3.3              
+Flask-SQLAlchemy==3.1.1   # для работы с PostgreSQL через ORM
+psycopg2-binary==2.9.9    # драйвер для PostgreSQL
+gunicorn==21.2.0          # WSGI сервер для запуска приложения
+redis==5.0.1              # для работы с Redis
+python-dotenv==1.0.0      # для загрузки переменных из .env файла
+uwsgi==2.0.23
