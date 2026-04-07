@@ -1,43 +1,13 @@
-ЗАМЕТКИ
+Красильникова К0609-23
 
-config.py хранит настройки приложения: где находится постгрес и редис, отключение отслеживания изменений для экономии, ключ для подписи сессий и кукис
+собрать и запушить образ
 
-__init__.py фабрика приложения: создает фласк, загружает конфиг, бд, маршруты и таблицы
+docker build -t nikanikanika/flask-nginx:latest .
+docker push nikanikanika/flask-nginx:latest
 
-models.py модель пользователя: поля таблицы и преобразование в json
+задеплоить 
+cd ansible
+ansible-playbook -i inventory.ini playbook_kubectl_fixed.yml
 
-routes.py содержит crud-маршруты и декоратор для кеширования редис
-
-blueprint это способ организации маршрутов в фласк, позволяющий группировать связанные эндпоинты вместе
-
-docker-compose.yml оркестрирует контейнеры
-
-dockerfile для сборки образа: копирует файлы, устанавливает зависимости, содержит команду для запуска gunicorn 
-
-gunicorn это сервер который запускает приложение в режиме продакшена. поддерживает несколько потоков, может обрабатывать несколько запросов одновременно
-
-wsgi.py точка входа для gunicorn: создание экземпляра приложения, активация сервера для разработки при прямом запуске
-
-nginx.conf настраивает nginx как прокси-сервер: принимает запросы на порт 80, передает их на gunicorn и кеширует ответы
-
----
-
-запуск
-docker-compose up --build
-
-проверка через Nginx
-curl -I http://localhost/api/users
-
-первый запрос
-curl http://localhost/api/users
-
-второй запрос
-curl -I http://localhost/api/users
-
-проверка создания пользователя
-curl -X POST http://localhost/api/users \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Тест Nginx","email":"nginx@example.com"}'
-
-кеширование рэдис
-docker exec -it flask_redis redis-cli KEYS "*"
+проверка
+curl http://192.168.122.34:30080/api/health
