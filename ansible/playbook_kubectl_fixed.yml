@@ -1,0 +1,82 @@
+---
+- name: Setup Docker, k3s and deploy Flask app
+  hosts: k3s
+  become: yes
+  vars:
+    dockerhub_username: "nikanikanika"
+    image_tag: "latest"
+    app_name: "flask-app"
+
+  tasks:
+    - name: Install Docker on RedOS
+      dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+        state: present
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install k3s
+      shell: curl -sfL https://get.k3s.io | sh -
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Wait for k3s to be ready
+      command: k3s kubectl get nodes
+      register: result
+      until: result.rc == 0
+      retries: 15
+      delay: 10
+
+    - name: Deploy Flask app
+      shell: |
+        k3s kubectl apply -f - <<EOF
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: {{ app_name }}
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              app: {{ app_name }}
+          template:
+            metadata:
+              labels:
+                app: {{ app_name }}
+            spec:
+              containers:
+              - name: {{ app_name }}
+                image: {{ dockerhub_username }}/flask-nginx:{{ image_tag }}
+                ports:
+                - containerPort: 80
+        EOF
+
+    - name: Deploy Service
+      shell: |
+        k3s kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ app_name }}-service
+        spec:
+          selector:
+            app: {{ app_name }}
+          ports:
+            - port: 80
+              targetPort: 80
+              nodePort: 30080
+          type: NodePort
+        EOF
+
+    - name: Wait for pods
+      command: k3s kubectl wait --for=condition=ready pod -l app={{ app_name }} --timeout=120s
+
+    - name: Show deployment info
+      debug:
+        msg: "App deployed! Access at http://{{ ansible_host }}:30080/api/health"
